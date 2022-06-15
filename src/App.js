@@ -6,45 +6,50 @@ import { DataContext } from './Context/DataContext'
 import { SearchContext } from './Context/SearchContext'
 import AlbumView from './Components/AlbumView'
 import ArtistView from './Components/ArtistView'
+import Spinner from './Components/Spinner'
+import { createResource as fetchData } from './helper'
+import './App.css'
 
 
-function App() {
-  let [message, setMessage] = useState('Search for Music!')
-  let [data, setData] = useState([])
+const App = () => {
   let searchInput = useRef('')
-
-  const API_URL = 'https://itunes.apple.com/search?term='
+  let [data, setData] = useState(null)
+  let [message, setMessage] = useState('Search for Music!')
 
   const handleSearch = (e, term) => {
     e.preventDefault()
-    const fetchData = async () => {
-      document.title = `${term} Music`
-      const response = await fetch(API_URL + term)
-      const resData = await response.json()
-      if (resData.results.length > 0) {
-        setData(resData.results)
-      } else {
-        setMessage('Not Found')
-      }
+    setData(fetchData(term, 'main'))
+  }
+
+  const renderGallery = () => {
+    if(data) {
+      return (
+        <Suspense fallback={<Spinner />}>
+          <Gallery />
+        </Suspense>
+      )
     }
-    fetchData()
   }
 
   return (
     <div className="App">
-      <SearchContext.Provider value={{
-        term: searchInput,
-        handleSearch: handleSearch
-      }}>
-      <SearchBar />
-      </SearchContext.Provider>
       {message}
-      <DataContext.Provider value={data} > 
-      <Gallery />
-      </DataContext.Provider>
-      <AlbumView />
-      <ArtistView />
-
+      <Router>
+        <Route exact path={'/'}>
+          <SearchContext.Provider value={{term: searchInput, handleSearch: handleSearch}}>
+            <SearchBar />
+          </SearchContext.Provider>
+            <DataContext.Provider value={data}>
+              {renderGallery()}
+            </DataContext.Provider>
+        </Route>
+        <Route path="/album/:id">
+          <AlbumView />
+        </Route>
+        <Route path="/artist/:id">
+          <ArtistView />
+        </Route>
+      </Router>
     </div>
   );
 }
